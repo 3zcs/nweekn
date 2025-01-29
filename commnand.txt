@@ -1,0 +1,16 @@
+
+
+docker run --name my-parse-server -v config-vol:/parse-server/config -v
+D:/FlutterProject/nweekn/parse-server/cloud:/parse-server/cloud -p 1337:1337
+--link my-mongo-instance -d parse-server --appId APPLICATION_ID --masterKey MASTER_KEY
+--databaseURI mongodb://mongo/nweekn --cloud /parse-server/cloud/main.js --masterKeyIps "172.17.0.0/16"
+
+
+parse-dashboard --dev --appId APPLICATION_ID --masterKey MASTER_KEY --serverURL "http://localhost:1337/parse/" --appName optionalName
+
+
+docker run -d --name parse-server -p 1337:1337 -v /path/to/your/cloud:/parse-server/cloud \
+  -e PARSE_SERVER_APPLICATION_ID=myAppId \
+  -e PARSE_SERVER_MASTER_KEY=myMasterKey \
+  -e PARSE_SERVER_DATABASE_URI=mongodb://<mongo-host>:<mongo-port>/<database-name> \
+  parseplatform/parse-server

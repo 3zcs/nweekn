@@ -1,0 +1,17 @@
+{
+  "apps": [
+    {
+      "appId": "nweeknid",
+      "masterKey": "mnweeknkey",
+      "serverURL": "http://localhost:1337/parse",
+      "appName": "MyApp"
+    }
+  ],
+  "users": [
+    {
+      "user": "admin",
+      "pass": "admin"
+    }
+  ],
+  "useEncryptedPasswords": false
+}
