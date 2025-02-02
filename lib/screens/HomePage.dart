@@ -352,8 +352,7 @@ import 'PostDetailPage.dart';
 
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
-import 'CreatePostPage.dart';
-import 'PostDetailPage.dart';
+
 
 class HomePage extends StatefulWidget {
   @override
