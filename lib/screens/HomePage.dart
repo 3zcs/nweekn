@@ -350,8 +350,6 @@ import 'PostDetailPage.dart';
 //   }
 // }
 
-import 'package:flutter/material.dart';
-import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import 'CreatePostPage.dart';
