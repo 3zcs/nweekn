@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:nweekn/screens/ForgotPasswordScreen.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
-
 import 'HomePage.dart';
 import 'RegisterScreen.dart';
 
@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Color(0xfff7f1ec),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 60.0),
         child: Column(
@@ -110,7 +110,12 @@ class _LoginScreenState extends State<LoginScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {}, // Add Forgot Password Functionality
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                  );
+                }, // Add Forgot Password Functionality
                 child: Text("Forgot Password?"),
               ),
             ),
@@ -126,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                backgroundColor: Colors.blue,
+                backgroundColor: Color(0xff132137),
               ),
               child: Center(
                 child: Text(

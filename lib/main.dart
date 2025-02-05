@@ -4,26 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/HomePage.dart';
 import 'screens/LoginScreen.dart';
 import 'package:nweekn/intro/introduction_animation_screen.dart';
+import 'package:nweekn/constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Parse
-  //const String appId = "nweeknid"; // Replace with your Parse App ID
-  //const String serverUrl = "http://192.168.75.2:1337/parse"; // Replace with your server URL
-
-  //const String serverUrl = "http://172.20.10.2:1337/parse"; // Replace with your server URL
-
-  const String appId = 'eK3MqemeG26HmXmZUSNVFrcrh5on0bhKAKeCSOMT';
-  const String clientKey = '2eEMShvSkfAHrTVoXb0U7qToCNNpXErFt8bSQQOp';
-  const serverUrl = 'https://parseapi.back4app.com';
-
   await Parse().initialize(
-    appId,
-    serverUrl,
-    clientKey: clientKey, // Optional
+    AppConfig.appId,
+    AppConfig.serverUrl,
+    clientKey: AppConfig.clientKey, // Optional
     autoSendSessionId: true, // Enable sessions
-
   );
 
 
