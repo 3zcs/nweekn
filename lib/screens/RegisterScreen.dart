@@ -28,7 +28,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final password = passwordController.text.trim();
       final email = emailController.text.trim();
       final bio = bioController.text.trim();
-      print('Email from text field: ' + emailController.text);
 
 
       final user = ParseUser(username, password, email)
@@ -280,7 +279,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Text("Already have an account?"),
                         TextButton(
                           onPressed: () {
-                            Navigator.pop(context); // Navigate back to login screen
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LoginScreen(), // ✅ Pass username
+                              ),
+                            ); // Navigate back to login screen
                           },
                           child: Text("Log In"),
                         ),
