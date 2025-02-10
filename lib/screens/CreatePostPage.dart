@@ -98,7 +98,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text("Add New Section"),
+              title: Text("New Stop"),
               content: SingleChildScrollView( // ✅ Fixes overflow
                 child: Container(
                   width: 400, // ✅ Fixed width
@@ -140,7 +140,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       TextField(
                         controller: sectionTitleController,
                         decoration: InputDecoration(
-                          labelText: "Section Title",
+                          labelText: "Stop Title",
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -163,7 +163,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                       TextField(
                         controller: sectionContentController,
                         decoration: InputDecoration(
-                          labelText: "Section Content",
+                          labelText: "Stop Details",
                           border: OutlineInputBorder(),
                         ),
                         maxLines: 3,
@@ -260,7 +260,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Post saved successfully!')),
       );
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } else {
       print("❌ Failed to save post: ${response.error?.message}");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -280,7 +280,19 @@ class _CreatePostPageState extends State<CreatePostPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Create Post')),
+      appBar: AppBar(
+        title: Text('Create OWeekN Idea'),
+        elevation: 4.0, // ✅ Adds a drop shadow like Home
+        shadowColor: Colors.black.withAlpha(128), // ✅ Soft shadow
+        backgroundColor: Colors.white, // ✅ Keeps a clean design
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black), // ✅ Matches Home Style
+          onPressed: () {
+            Navigator.pop(context); // ✅ Navigates back
+          },
+        ),
+      ),
+
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16), // ✅ Adds spacing
         child: Column(
@@ -327,7 +339,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
               child: TextField(
                 controller: postTitleController,
                 decoration: InputDecoration(
-                  labelText: 'Enter post title',
+                  labelText: 'Title',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), // ✅ Rounded corners
                   contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 15), // ✅ Spacing inside input
                 ),
@@ -343,7 +355,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         child: TextField(
               controller: postSummaryController,
               decoration: InputDecoration(
-                labelText: 'Enter post summary',
+                labelText: 'Summary',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), // ✅ Rounded corners
                 contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 15), // ✅ Spacing inside input
               ),
@@ -362,7 +374,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 child: ElevatedButton.icon(
                   onPressed: showAddSectionDialog,
                   icon: Icon(Icons.add, color: Colors.white),
-                  label: Text('Add Section',
+                  label: Text('Add Stop',
                     style: TextStyle(color: Colors.white)
                   ),
                   style: ElevatedButton.styleFrom(
@@ -380,7 +392,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 5),
               child: sections.isEmpty
-                  ? Center(child: Text('No sections added yet.'))
+                  ? Center(child: Text('No stops added yet.'))
                   : ListView.builder(
                 shrinkWrap: true,
                 physics: NeverScrollableScrollPhysics(),

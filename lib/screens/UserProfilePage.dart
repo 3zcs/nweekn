@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nweekn/constants.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 
 class UserProfilePage extends StatefulWidget {
@@ -53,18 +54,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
           if (profileImageData is ParseFile) {
             profileImageUrl = profileImageData.url;
           } else {
-            profileImageUrl = user.get('profileImage');
+            profileImageUrl = AppConfig.imgUrl + user.get('profileImage');
           }
 
           return Stack(
             children: [
               // ✅ Background Image
               Container(
-                height: MediaQuery.of(context).size.height * 0.50,
+                height: MediaQuery.of(context).size.height * 0.53,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage('assets/idea.png'), // ✅ Same background as Edit Profile
+                    image: AssetImage('assets/location.png'), // ✅ Same background as Edit Profile
                     fit: BoxFit.cover,
                   ),
                 ),

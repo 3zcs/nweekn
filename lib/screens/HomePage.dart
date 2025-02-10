@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nweekn/constants.dart';
 import 'package:nweekn/screens/CreatePostPage.dart';
+import 'package:nweekn/screens/OWeekNIdeaPage.dart';
 import 'package:nweekn/screens/PostDetailPage.dart';
 import 'package:nweekn/screens/ProfileEditScreen.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
@@ -89,17 +90,21 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Home'),
-    leading: Builder( // ✅ Fix: Use Builder to get the correct context
-    builder: (context) {
-    return IconButton(
-    icon: Icon(Icons.menu),
-    onPressed: () {
-      Scaffold.of(context).openDrawer();
-      },
-    );// Open Drawer Menu
+        elevation: 4.0, // ✅ Adds a drop shadow
+        shadowColor: Colors.black.withAlpha(128), // ✅ Set shadow color with opacity
+        backgroundColor: Colors.white, // ✅ Set background color for better visibility
+        leading: Builder(
+          builder: (context) {
+            return IconButton(
+              icon: Icon(Icons.menu, color: Colors.black), // ✅ Ensure contrast
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            );
           },
         ),
       ),
+
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -155,7 +160,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.edit),
+              leading: Icon(Icons.edit, color: Colors.amber),
               title: Text("Edit Profile"),
               onTap: () {
                 Navigator.push(
@@ -165,7 +170,17 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.logout),
+              leading: Icon(Icons.lightbulb_outline, color: Colors.amber), // ✅ Lamp Icon
+              title: Text("The OWeekN Idea"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => OWeekNIdeaPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.amber),
               title: Text("Logout"),
               onTap: logout,
             ),
@@ -225,6 +240,7 @@ class _HomePageState extends State<HomePage> {
                         final postId = post.objectId!;
                         final title = post.get<String>('postTitle') ?? 'No Title';
                         final username = post.get<String>('createdBy') ?? 'Unknown User';
+                        final summary = post.get<String>('postSummary') ?? 'No Summary Available'; // ✅ Get summary
                         final dynamic postImageData = post.get('postImage');
 
                         // ✅ Get Image URL
@@ -243,7 +259,7 @@ class _HomePageState extends State<HomePage> {
                               //   builder: (context) => PostDetailPage(postId: postId),
                               // ),
                               PageRouteBuilder(
-                                pageBuilder: (context, animation, secondaryAnimation) => PostDetailPage(postId: postId),
+                                pageBuilder: (context, animation, secondaryAnimation) => PostDetailPage(postId: postId, title: title,),
                                 transitionsBuilder: (context, animation, secondaryAnimation, child) {
                                   return FadeTransition(opacity: animation, child: child);
                                 },
@@ -254,6 +270,7 @@ class _HomePageState extends State<HomePage> {
                             title: title,
                             username: username,
                             imageUrl: postImageUrl ?? '',
+                            summary: summary, // ✅ Pass summary
                           ),
                         );
                       },
@@ -269,12 +286,15 @@ class _HomePageState extends State<HomePage> {
 
       // Floating Action Button (FAB) to Create a New Post
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => CreatePostPage()),
           );
-          refreshData(); // ✅ Refresh posts after returning
+
+          if (result == true) {
+            refreshData(); // ✅ Refresh the posts when returning
+          }
         },
         backgroundColor: Color(0xff132137),
         child: Icon(Icons.add, color: Colors.white),
@@ -284,7 +304,7 @@ class _HomePageState extends State<HomePage> {
 
   void refreshData() {
     setState(() {
-      postsFuture = fetchPosts(); // ✅ Refresh post list
+      postsFuture = fetchPosts();
     });
   }
 }
@@ -294,11 +314,13 @@ class PostCard extends StatelessWidget {
   final String title;
   final String username;
   final String imageUrl;
+  final String summary; // ✅ New summary field
 
   const PostCard({
     required this.title,
     required this.username,
     required this.imageUrl,
+    required this.summary, // ✅ Accept summary
   });
 
   @override
@@ -306,6 +328,7 @@ class PostCard extends StatelessWidget {
     return Card(
       elevation: 4.0,
       margin: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15.0),
       ),
@@ -318,15 +341,15 @@ class PostCard extends StatelessWidget {
             child: imageUrl.isNotEmpty
                 ? Image.network(
               imageUrl,
-              height: 180,
               width: double.infinity,
-              fit: BoxFit.cover,
+              height: 180,
+              fit: BoxFit.fitWidth, // ✅ Ensures the image fits properly
             )
                 : Image.asset(
               'assets/photo-camera.png',
-              height: 180,
               width: double.infinity,
-              fit: BoxFit.cover,
+              height: 180,
+              fit: BoxFit.fitWidth,
             ),
           ),
 
@@ -347,6 +370,15 @@ class PostCard extends StatelessWidget {
                   'Created by: $username',
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
+                SizedBox(height: 6),
+
+                // ✅ Post Summary
+                Text(
+                  summary,
+                  maxLines: 2, // ✅ Limit to 2 lines to keep layout clean
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                ),
               ],
             ),
           ),
@@ -355,4 +387,5 @@ class PostCard extends StatelessWidget {
     );
   }
 }
+
 
