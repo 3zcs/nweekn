@@ -29,29 +29,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final email = emailController.text.trim();
       final bio = bioController.text.trim();
 
-
-      final user = ParseUser(username, password, email)
-        ..set('name', nameController.text.trim())
-        ..set('bio', bio);
-
-
-      if (_imageFile != null) {
-        print("📤 Uploading image...");
-
-        ParseFile parseImage = ParseFile(File(_imageFile!.path));
-
-        final ParseResponse imageResponse = await parseImage.save();
-
-        if (imageResponse.success && parseImage.url != null) {
-          print("✅ Image uploaded successfully: ${parseImage.url}");
-          user.set('profileImage', parseImage.url); // ✅ Store URL in Parse
-        } else {
-          print("❌ Image upload failed: ${imageResponse.error?.message}");
-        }
-      }
-
       print('Registration start ');
-      final response = await user.signUp();
+      // ✅ Call Cloud Function for Secure Registration
+      final cloudFunction = ParseCloudFunction('Register');
+      final response = await cloudFunction.execute(parameters: {
+        "username": username,
+        "password": password,
+        "email": email,
+        "bio": bio,
+      });
+
+      // you can't upload before auth
+      // if (_imageFile != null) {
+      //   print("📤 Uploading image...");
+      //
+      //   ParseFile parseImage = ParseFile(File(_imageFile!.path));
+      //
+      //   final ParseResponse imageResponse = await parseImage.save();
+      //
+      //   if (imageResponse.success && parseImage.url != null) {
+      //     print("✅ Image uploaded successfully: ${parseImage.url}");
+      //     user.set('profileImage', parseImage.url); // ✅ Store URL in Parse
+      //   } else {
+      //     print("❌ Image upload failed: ${imageResponse.error?.message}");
+      //   }
+      // }
+
       print('Registration done ');
       if (response.success) {
         ScaffoldMessenger.of(context).showSnackBar(

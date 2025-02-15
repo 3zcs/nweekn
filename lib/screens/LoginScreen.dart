@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nweekn/screens/ForgotPasswordScreen.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'HomePage.dart';
 import 'RegisterScreen.dart';
 
@@ -25,24 +26,41 @@ class _LoginScreenState extends State<LoginScreen> {
     final username = usernameController.text.trim();
     final password = passwordController.text.trim();
 
-    final user = ParseUser(username, password, null);
-    final response = await user.login();
+    final cloudFunction = ParseCloudFunction('Login');
+    final response = await cloudFunction.execute(parameters: {
+      "username": username,
+      "password": password,
+    });
 
     setState(() {
       isLoading = false;
     });
 
     if (response.success) {
+      final sessionToken = response.result['sessionToken'];
+      final userId = response.result['userId'];
+      final userName = response.result['username'];
+
+      print("✅ Login successful! User: $userName (ID: $userId)");
+
+      // ✅ Securely store session token (for auto-login)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('sessionToken', sessionToken);
+      await prefs.setString('userId', userId);
+
+      // ✅ Navigate to HomePage
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomePage()),
       );
     } else {
+      print("❌ Login failed: ${response.error?.message}");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login Failed: ${response.error?.message}')),
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

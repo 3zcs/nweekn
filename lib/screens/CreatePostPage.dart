@@ -1,19 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
-
-extension FileSizeExtension on File {
-  /// ✅ Get file size in KB
-  double get sizeInKB => lengthSync() / 1024;
-
-  /// ✅ Get file size in MB
-  double get sizeInMB => lengthSync() / (1024 * 1024);
-}
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CreatePostPage extends StatefulWidget {
   @override
@@ -22,90 +12,45 @@ class CreatePostPage extends StatefulWidget {
 
 class _CreatePostPageState extends State<CreatePostPage> {
   final TextEditingController postTitleController = TextEditingController();
-  final TextEditingController postSummaryController  = TextEditingController();
-
+  final TextEditingController postSummaryController = TextEditingController();
   List<Map<String, dynamic>> sections = [];
   String? postImageUrl;
+  bool _isLoading = false;
 
+  /// ✅ Pick & Upload Image
   Future<String?> pickAndUploadImage() async {
-    // ✅ Ensure permission before accessing storage
-    await requestStoragePermission();
-
     final ImagePicker _picker = ImagePicker();
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
 
-    if (image == null) {
-      print("❌ No image selected.");
-      return null; // ✅ User canceled picking an image
-    }
+    if (image == null) return null;
 
-    print("📤 Compressing image...");
-
-    // ✅ Compress the image before uploading
-    File compressedImage = await compressImage(File(image.path));
-
-    print("📤 Uploading image to Back4App...");
-
-    // ✅ Convert image to ParseFile and upload
-    ParseFile parseImage = ParseFile(compressedImage);
+    ParseFile parseImage = ParseFile(File(image.path));
     final ParseResponse response = await parseImage.save();
 
-    if (response.success && parseImage.url != null) {
-      print("✅ Image uploaded successfully: ${parseImage.url}");
-      return parseImage.url; // ✅ Return uploaded image URL
-    } else {
-      print("❌ Image upload failed: ${response.error?.message}");
-      return null;
-    }
+    return response.success ? parseImage.url : null;
   }
 
-  Future<File> compressImage(File imageFile) async {
-    final directory = await getTemporaryDirectory();
-    final targetPath = '${directory.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-    var result = await FlutterImageCompress.compressAndGetFile(
-      imageFile.absolute.path, // ✅ Original Image Path
-      targetPath, // ✅ New Compressed Image Path
-      quality: 85, // ✅ Adjust quality (80-85 recommended)
-      minWidth: 800, // ✅ Resize width
-      minHeight: 800, // ✅ Resize height
-    );
-
-    if (result == null) {
-      print("❌ Image compression failed.");
-      return imageFile; // Return original if compression fails
-    }
-
-    File compressedFile = File(result.path);
-    print("✅ Image compressed successfully: ${compressedFile.path}");
-    print("✅ New file size: ${compressedFile.lengthSync() / 1024} KB");
-
-    return compressedFile;
-  }
-
-
-
-  /// Opens a dialog for adding a section
-  void showAddSectionDialog() {
+  /// ✅ Opens a Dialog to Add a Stop
+  Future<Map<String, dynamic>?> showAddSectionDialog() async {
     final TextEditingController sectionTitleController = TextEditingController();
     final TextEditingController minuteController = TextEditingController();
     final TextEditingController sectionContentController = TextEditingController();
     String? sectionImageUrl;
 
-    showDialog(
+    return await showDialog<Map<String, dynamic>?>(
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
               title: Text("New Stop"),
-              content: SingleChildScrollView( // ✅ Fixes overflow
+              content: SingleChildScrollView(
                 child: Container(
-                  width: 400, // ✅ Fixed width
+                  width: MediaQuery.of(context).size.width * 0.9, // ✅ 90% width
                   child: Column(
-                    mainAxisSize: MainAxisSize.min, // ✅ Prevents unnecessary expansion
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ✅ Image Preview at the Top
+                      // ✅ Image Preview
                       if (sectionImageUrl != null)
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
@@ -116,10 +61,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
                             fit: BoxFit.cover,
                           ),
                         ),
-
                       SizedBox(height: 10),
 
-                      // ✅ Button to Upload Image
+                      // ✅ Upload Image Button
                       ElevatedButton.icon(
                         onPressed: () async {
                           String? uploadedImageUrl = await pickAndUploadImage();
@@ -133,10 +77,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         label: Text("Add Image", style: TextStyle(color: Colors.white)),
                         style: ElevatedButton.styleFrom(backgroundColor: Color(0xff132137)),
                       ),
-
                       SizedBox(height: 16),
 
-                      // ✅ Section Title Field
+                      // ✅ Section Title
                       TextField(
                         controller: sectionTitleController,
                         decoration: InputDecoration(
@@ -144,7 +87,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           border: OutlineInputBorder(),
                         ),
                       ),
-
                       SizedBox(height: 10),
 
                       // ✅ Minute Field (Only MM now)
@@ -156,7 +98,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         ),
                         keyboardType: TextInputType.number,
                       ),
-
                       SizedBox(height: 10),
 
                       // ✅ Section Content Field
@@ -174,33 +115,18 @@ class _CreatePostPageState extends State<CreatePostPage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    // backgroundColor: Color(0xff132137), // ✅ Button background color
-                     foregroundColor: Color(0xff132137), // ✅ Text (label) color
-                    // padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // ✅ Adds padding for better appearance
-                    // shape: RoundedRectangleBorder(
-                    //   borderRadius: BorderRadius.circular(8), // ✅ Rounded corners
-                    // ),
-                  ),
-                  child: Text(
-                    "cancel",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal), // ✅ Text styling
-                  ),
+                  onPressed: () => Navigator.pop(context, null), // ✅ Close dialog without saving
+                  child: Text("Cancel", style: TextStyle(fontSize: 16, color: Color(0xff132137))),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     if (sectionTitleController.text.isNotEmpty && sectionContentController.text.isNotEmpty) {
-                      setState(() {
-                        sections.add({
-                          'time': '${minuteController.text} min',
-                          'title': sectionTitleController.text,
-                          'content': sectionContentController.text,
-                          'imageUrl': sectionImageUrl ?? '',
-                        });
+                      Navigator.pop(context, {
+                        'time': '${minuteController.text} min',
+                        'title': sectionTitleController.text,
+                        'content': sectionContentController.text,
+                        'imageUrl': sectionImageUrl ?? '',
                       });
-                      Navigator.pop(context);
-                      this.setState(() {});
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Title and Content cannot be empty!')),
@@ -208,17 +134,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xff132137), // ✅ Button background color
-                    foregroundColor: Colors.white, // ✅ Text (label) color
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // ✅ Adds padding for better appearance
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8), // ✅ Rounded corners
-                    ),
+                    backgroundColor: Color(0xff132137),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
-                  child: Text(
-                    "Add",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.normal), // ✅ Text styling
-                  ),
+                  child: Text("Add", style: TextStyle(fontSize: 16)),
                 ),
               ],
             );
@@ -228,52 +148,49 @@ class _CreatePostPageState extends State<CreatePostPage> {
     );
   }
 
-  /// Save post to Parse Server
   Future<void> savePost() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
     final String postTitle = postTitleController.text.trim();
     final String postSummary = postSummaryController.text.trim();
 
-
     if (postTitle.isEmpty || postSummary.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Post title cannot be empty!')),
+        SnackBar(content: Text('Post title and summary cannot be empty!')),
       );
+      setState(() => _isLoading = false);
       return;
     }
 
     final ParseUser? currentUser = await ParseUser.currentUser() as ParseUser?;
-    final String username = currentUser?.get<String>('name') ??
-        currentUser?.get<String>('username') ??
-        'Unknown User';
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User not authenticated!')),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
 
-    final post = ParseObject('Posts')
-      ..set('postTitle', postTitle)
-      ..set('postImage', postImageUrl ?? '')
-      ..set('postSummary', postSummary) // ✅ Store Summary
-      ..set('sections', sections)
-      ..set('createdBy', username);
+    final String username = currentUser.get<String>('name') ?? currentUser.get<String>('username') ?? 'Unknown User';
 
-    final response = await post.save();
+    final cloudFunction = ParseCloudFunction('createPost');
+    final response = await cloudFunction.execute(parameters: {
+      "postTitle": postTitle,
+      "postSummary": postSummary,
+      "postImageUrl": postImageUrl ?? '',
+      "sections": sections,
+    });
+
+    setState(() => _isLoading = false);
 
     if (response.success) {
-      print("✅ Post saved successfully!");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Post saved successfully!')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Post created successfully!')));
       Navigator.pop(context, true);
     } else {
-      print("❌ Failed to save post: ${response.error?.message}");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save post: ${response.error?.message}')),
+        SnackBar(content: Text('Failed to create post: ${response.error?.message}')),
       );
-    }
-  }
-
-  /// Request Storage Permission
-  Future<void> requestStoragePermission() async {
-    PermissionStatus status = await Permission.storage.request();
-    if (status.isPermanentlyDenied) {
-      openAppSettings();
     }
   }
 
@@ -282,113 +199,94 @@ class _CreatePostPageState extends State<CreatePostPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Create OWeekN Idea'),
-        elevation: 4.0, // ✅ Adds a drop shadow like Home
-        shadowColor: Colors.black.withAlpha(128), // ✅ Soft shadow
-        backgroundColor: Colors.white, // ✅ Keeps a clean design
+        elevation: 4.0,
+        shadowColor: Colors.black.withAlpha(128),
+        backgroundColor: Colors.white,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black), // ✅ Matches Home Style
-          onPressed: () {
-            Navigator.pop(context); // ✅ Navigates back
-          },
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
 
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16), // ✅ Adds spacing
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Image at the top with margin
+            /// ✅ **Post Image Picker**
             GestureDetector(
               onTap: () async {
                 String? uploadedImageUrl = await pickAndUploadImage();
                 if (uploadedImageUrl != null) {
-                  setState(() {
-                    postImageUrl = uploadedImageUrl;
-                  });
+                  setState(() => postImageUrl = uploadedImageUrl);
                 }
               },
               child: Container(
                 height: 200,
                 width: double.infinity,
-                margin: EdgeInsets.only(bottom: 16), // ✅ Adds spacing below the image
+                margin: EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(12), // ✅ Adds rounded corners
+                  borderRadius: BorderRadius.circular(12),
                   image: postImageUrl != null
                       ? DecorationImage(image: NetworkImage(postImageUrl!), fit: BoxFit.cover)
                       : null,
                 ),
-                child: postImageUrl == null
-                    ? Icon(Icons.camera_alt, size: 50, color: Colors.grey[700])
-                    : null,
+                child: postImageUrl == null ? Icon(Icons.camera_alt, size: 50, color: Colors.grey[700]) : null,
               ),
             ),
 
-            // ✅ Title Field with More Spacing
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 5), // ✅ Extra padding
-              // child: Text(
-              //   'Post Title',
-              //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              // ),
-            ),
-            SizedBox(height: 8), // ✅ Adds spacing between elements
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 5), // ✅ Ensures all content is aligned
-              child: TextField(
-                controller: postTitleController,
-                decoration: InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), // ✅ Rounded corners
-                  contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 15), // ✅ Spacing inside input
-                ),
+            /// ✅ **Post Title Input**
+            TextField(
+              controller: postTitleController,
+              decoration: InputDecoration(
+                labelText: 'Title',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 15),
               ),
             ),
-            SizedBox(height: 20), // ✅ Space before Divider
-            // Text(
-            //   'Post Summary',
-            //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            // ),
-      Padding(
-        padding: EdgeInsets.symmetric(horizontal: 5), // ✅ Ensures all content is aligned
-        child: TextField(
+            SizedBox(height: 16),
+
+            /// ✅ **Post Summary Input**
+            TextField(
               controller: postSummaryController,
               decoration: InputDecoration(
                 labelText: 'Summary',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), // ✅ Rounded corners
-                contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 15), // ✅ Spacing inside input
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 15),
               ),
-              maxLines: 3, // ✅ Allow multiline input
+              maxLines: 3,
             ),
-      ),
-
             SizedBox(height: 16),
 
-            Divider(), // ✅ Page Divider
+            Divider(),
 
-            // ✅ Add Section Button with Padding
+            /// ✅ **Add Stop Button (Now Working)**
             Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 10), // ✅ Space around button
+                padding: EdgeInsets.symmetric(vertical: 10),
                 child: ElevatedButton.icon(
-                  onPressed: showAddSectionDialog,
+                  onPressed: () async {
+                    final newSection = await showAddSectionDialog();
+                    if (newSection != null) {
+                      setState(() {
+                        sections.add(newSection);
+                      });
+                    }
+                  },
                   icon: Icon(Icons.add, color: Colors.white),
-                  label: Text('Add Stop',
-                    style: TextStyle(color: Colors.white)
-                  ),
+                  label: Text('Add Stop', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xff132137),
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // ✅ Button padding
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
                 ),
               ),
             ),
 
-            // ✅ Adds Space Before Section List
             SizedBox(height: 16),
 
-            // ✅ Section List with Padding
+            /// ✅ **Section List**
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 5),
               child: sections.isEmpty
@@ -412,17 +310,17 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         // ✅ Image at the Top (No Padding)
                         if (section['imageUrl'] != null && section['imageUrl'].isNotEmpty)
                           ClipRRect(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(12)), // ✅ Rounds top corners
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                             child: Image.network(
                               section['imageUrl']!,
                               height: 150,
                               width: double.infinity,
-                              fit: BoxFit.cover, // ✅ Ensures image fills the space
+                              fit: BoxFit.cover,
                             ),
                           ),
 
                         Padding(
-                          padding: EdgeInsets.all(12), // ✅ Padding only for text & content
+                          padding: EdgeInsets.all(12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -444,10 +342,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 },
               ),
             ),
-          ],
+
+          ]
         ),
       ),
-
+      // ✅ Floating Save Button
       floatingActionButton: FloatingActionButton(
         onPressed: savePost,
         backgroundColor: Color(0xff132137),

@@ -12,12 +12,12 @@ class UserProfilePage extends StatefulWidget {
 }
 
 class _UserProfilePageState extends State<UserProfilePage> {
-  late Future<ParseUser?> userFuture;
+  late Future<Map<String, dynamic>?> userFuture;
 
   @override
   void initState() {
     super.initState();
-    userFuture = fetchUserByUsername(widget.username); // ✅ Fetch user by username
+    userFuture = fetchUserProfile(widget.username); // ✅ Fetch user by username
   }
 
   Future<ParseUser?> fetchUserByUsername(String username) async {
@@ -33,10 +33,23 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
   }
 
+  Future<Map<String, dynamic>?> fetchUserProfile(String username) async {
+    final ParseCloudFunction function = ParseCloudFunction('getCreatorProfile');
+    final ParseResponse response = await function.execute(
+        parameters: {"username": username});
+
+    if (response.success && response.result != null) {
+      return Map<String, dynamic>.from(response.result);
+    } else {
+      print("❌ Error fetching user: ${response.error?.message}");
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<ParseUser?>(
+      body: FutureBuilder<Map<String, dynamic>?>(
         future: userFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -46,16 +59,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
           }
 
           final user = snapshot.data!;
-          final name = user.get<String>('name') ?? 'Unknown Name';
-          final bio = user.get<String>('bio') ?? 'No Bio';
+          final name = user['username'] ?? 'Unknown User';
+          final bio = user['bio'] ?? 'No Bio Available';
 
-          final dynamic profileImageData = user.get('profileImage');
-          String? profileImageUrl;
-          if (profileImageData is ParseFile) {
-            profileImageUrl = profileImageData.url;
-          } else {
-            profileImageUrl = AppConfig.imgUrl + user.get('profileImage');
-          }
+          final dynamic profileImageUrl = user['profileImage'];
+          // String? profileImageUrl;
+          // if (profileImageData is ParseFile) {
+          //   profileImageUrl = profileImageData.url;
+          // } else {
+          //   profileImageUrl = AppConfig.imgUrl + user.get('profileImage');
+          // }
 
           return Stack(
             children: [

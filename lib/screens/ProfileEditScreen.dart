@@ -3,6 +3,7 @@ import 'package:nweekn/constants.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   @override
@@ -25,69 +26,82 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> loadUserInfo() async {
-    final ParseUser? user = await ParseUser.currentUser() as ParseUser?;
-    if (user != null) {
-      setState(() {
-        nameController.text = user.get<String>('name') ?? '';
-        emailController.text = user.get<String>('email') ?? '';
-        bioController.text = user.get<String>('bio') ?? '';
+    final cloudFunction = ParseCloudFunction('getUserInfo');
+    final ParseResponse response = await cloudFunction.execute();
 
-        final dynamic profileImageData = user.get('profileImage'); // Get stored profile image
-        // ✅ Check if `profileImageData` is a `ParseFile`
-        if (profileImageData is ParseFile) {
-          profileImageUrl = profileImageData.url; // ✅ Extract the URL from ParseFile
-        } else {
-          profileImageUrl = user.get('profileImage'); // ✅ Handle cases where no image exists
-        }
-        print("profile $profileImageUrl");
-        //profileImageUrl = profileImage!.url;
+    if (response.success && response.result != null) {
+      setState(() {
+        nameController.text = response.result['username'] ?? '';
+        emailController.text = response.result['email'] ?? '';
+        bioController.text = response.result['bio'] ?? '';
+
+        print("✅ Updated bio: ${bioController.text}");
+
+        profileImageUrl = response.result['profileImage']; // ✅ Get profile image URL
+        print("✅ Updated profile image URL: $profileImageUrl");
       });
+    } else {
+      print("❌ Failed to fetch updated user info: ${response.error?.message}");
     }
   }
 
-  Future<void> updateUserProfile() async {
+  Future<String?> getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('userId');  // Retrieve userId
+  }
+
+  void updateUserProfile(BuildContext context) async {
     setState(() {
       _isLoading = true;
     });
 
-    final ParseUser? user = await ParseUser.currentUser() as ParseUser?;
-    if (user != null) {
-      //user.set('name', nameController.text.trim());
-      user.set('bio', bioController.text.trim());
+    final String? userId = await getCurrentUserId();
+    final String name = nameController.text.trim();
+    final String bio = bioController.text.trim();
+    print("✅ User id: ${userId}");
 
+    // ✅ Handle Image Upload (if changed)
+    ParseFile? profileImageFile;
+    if (_imageFile != null) {
+      profileImageFile = ParseFile(File(_imageFile!.path));
+      final ParseResponse imageResponse = await profileImageFile.save();
 
-      if (_imageFile != null) {
-        print("📤 Uploading image...");
-
-        // ✅ Ensure a `File` is passed to ParseFile
-        ParseFile parseImage = ParseFile(File(_imageFile!.path));
-        final ParseResponse imageResponse = await parseImage.save();
-
-        if (imageResponse.success && parseImage.url != null) {
-          print("✅ Image uploaded successfully: ${parseImage.url}");
-          user.set('profileImage', parseImage); // ✅ Store the file in Parse
-        } else {
-          print("❌ Image upload failed: ${imageResponse.error?.message}");
-        }
-      }
-
-      final response = await user.save();
-      if (response.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Profile Updated Successfully!')),
-        );
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Update Failed: ${response.error?.message}')),
-        );
+      if (!imageResponse.success) {
+        print("❌ Image upload failed: ${imageResponse.error?.message}");
+        profileImageFile = null; // Ensure null is passed if upload fails
       }
     }
+
+    // ✅ Call Cloud Function to update user profile
+    final cloudFunction = ParseCloudFunction('updateUserProfile');
+    final response = await cloudFunction.execute(parameters: {
+      "userId": userId,
+      "name": name,
+      "bio": bio,
+      "profileImage": profileImageFile, // ✅ Send ParseFile instead of String
+    });
 
     setState(() {
       _isLoading = false;
     });
+
+    if (response.success) {
+      //await loadUserInfo();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profile updated successfully!')),
+      );
+      Navigator.pop(context); // ✅ Go back to profile screen
+      Future.delayed(Duration(milliseconds: 300), () {
+        loadUserInfo(); // ✅ Reload updated user info
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Update Failed: ${response.error?.message}')),
+      );
+    }
   }
+
+
 
   Future<void> _pickImage() async {
     final ImagePicker _picker = ImagePicker();
@@ -119,9 +133,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               child: CircleAvatar(
                 radius: 50,
                 backgroundColor: Color(0xffebc642),
-                backgroundImage:  profileImageUrl != null
-                    ? NetworkImage(AppConfig.imgUrl + profileImageUrl!)
-                    : null,
+                backgroundImage: _imageFile != null
+                    ? FileImage(File(_imageFile!.path)) // ✅ Show selected image
+                    : (profileImageUrl != null
+                    //? NetworkImage(AppConfig.imgUrl + profileImageUrl!)
+                    ? NetworkImage(profileImageUrl!)
+                    : null),
                 child: _imageFile == null
                     ? Icon(Icons.camera_alt, size: 30, color: Colors.white)
                     : null,
@@ -149,7 +166,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             _isLoading
                 ? CircularProgressIndicator()
                 : ElevatedButton(
-              onPressed: updateUserProfile,
+              onPressed: (){
+            updateUserProfile(context); // ✅ Call the function inside the lambda
+            },
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
