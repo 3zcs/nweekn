@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'dart:io';
 
-import 'package:shared_preferences/shared_preferences.dart';
 
 class CreatePostPage extends StatefulWidget {
   @override
@@ -172,8 +172,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
       return;
     }
 
-    final String username = currentUser.get<String>('name') ?? currentUser.get<String>('username') ?? 'Unknown User';
-
     final cloudFunction = ParseCloudFunction('createPost');
     final response = await cloudFunction.execute(parameters: {
       "postTitle": postTitle,
@@ -198,15 +196,34 @@ class _CreatePostPageState extends State<CreatePostPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create OWeekN Idea'),
-        elevation: 4.0,
-        shadowColor: Colors.black.withAlpha(128),
-        backgroundColor: Colors.white,
+        elevation: 0, // ✅ Removes default shadow for a clean look
+        backgroundColor: Colors.transparent, // ✅ Transparent background for custom styling
+        centerTitle: true, // ✅ Centers the title text
+        flexibleSpace: ClipRRect(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)), // ✅ Rounded bottom corners
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.amber, // ✅ Matches Home & Post Details
+            ),
+          ),
+        ),
+        title: Text(
+          "Create Post",
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: Colors.black, // ✅ Keeps text black for contrast
+          ),
+        ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: Colors.black), // ✅ Back button to exit page
           onPressed: () => Navigator.pop(context),
         ),
       ),
+
+      // ✅ Matching Background Theme
+      backgroundColor: Colors.grey.shade100, // ✅ Soft background like other screens
+
 
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),

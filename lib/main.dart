@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'OWeekN',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -60,7 +60,6 @@ class MyApp extends StatelessWidget {
       ),
       home: FutureBuilder<bool>(
         future: hasSeenIntro(),
-        //future: _getCurrentUser(),
         builder: (context, introSnapshot) {
     if (introSnapshot.connectionState == ConnectionState.waiting) {
     return Scaffold(body: Center(child: CircularProgressIndicator())); // ✅ Loading state

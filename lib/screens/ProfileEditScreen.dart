@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nweekn/constants.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:parse_server_sdk_flutter/parse_server_sdk_flutter.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -116,7 +116,32 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Edit Profile")),
+      appBar: AppBar(
+        elevation: 0, // ✅ Removes shadow for a clean look
+        backgroundColor: Colors.transparent, // ✅ Transparent background for custom styling
+        centerTitle: true, // ✅ Centers the title
+        flexibleSpace: ClipRRect(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)), // ✅ Rounded bottom corners
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.amber, // ✅ Matches Home & Other Pages
+            ),
+          ),
+        ),
+        title: Text(
+          "Edit Profile",
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: Colors.black, // ✅ Keeps text black for contrast
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black), // ✅ Consistent back button style
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -148,7 +173,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             TextField(
               controller: nameController,
               enabled: false,
-              decoration: InputDecoration(labelText: "Name", border: OutlineInputBorder()),
+              decoration: InputDecoration(labelText: "Username", border: OutlineInputBorder()),
             ),
             SizedBox(height: 20),
             TextField(

@@ -1,5 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:nweekn/constants.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:nweekn/screens/CreatePostPage.dart';
 import 'package:nweekn/screens/OWeekNIdeaPage.dart';
 import 'package:nweekn/screens/PostDetailPage.dart';
@@ -105,16 +107,57 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> logout() async {
-    final ParseUser? user = await ParseUser.currentUser() as ParseUser?;
-    if (user != null) {
-      await user.logout();
-    }
+  Future<void> logout(BuildContext context) async {
+    try {
+      // ✅ Show confirmation dialog
+      bool confirm = await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Logout"),
+          content: Text("Are you sure you want to log out?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text("Logout", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
-    );
+      if (!confirm) return; // ✅ Cancel logout if user selects "Cancel"
+
+      // ✅ Logout from Parse (or Firebase, etc.)
+      final ParseUser? user = await ParseUser.currentUser() as ParseUser?;
+      if (user != null) {
+        var response = await user.logout();
+        if (!response.success) {
+          throw Exception("Logout failed: ${response.error?.message}");
+        }
+      }
+
+      // ✅ Clear locally stored session (SharedPreferences)
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // ✅ Removes all locally stored data
+
+      // ✅ Navigate to Login Screen & Prevent Back Navigation
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginScreen()), // ✅ Creates a new login screen
+            (Route<dynamic> route) => false, // ✅ Removes all previous routes from the stack
+      );
+    } catch (e) {
+      print("❌ Error during logout: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Logout failed. Please try again."),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<Map<String, dynamic>?> _getCurrentUser() async {
@@ -129,142 +172,189 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16), // ✅ Balanced padding
+          decoration: BoxDecoration(
+            color: Color(0xFFe3e3e3), // ✅ Matches the Post Card & Stops Card
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.amber, size: 24), // ✅ Matches theme icons
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Home'),
-        elevation: 4.0, // ✅ Adds a drop shadow
-        shadowColor: Colors.black.withAlpha(128), // ✅ Set shadow color with opacity
-        backgroundColor: Colors.white, // ✅ Set background color for better visibility
-        leading: Builder(
-          builder: (context) {
-            return IconButton(
-              icon: Icon(Icons.menu, color: Colors.black), // ✅ Ensure contrast
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-            );
-          },
+      appBar:
+
+    AppBar(
+      elevation: 0, // ✅ Remove default shadow for a clean look
+      backgroundColor: Colors.transparent, // ✅ Transparent to apply custom background
+      centerTitle: true, // ✅ Center the title text
+      flexibleSpace: ClipRRect(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)), // ✅ Rounded bottom corners
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.amber, // ✅ Custom Background Color (Light Grey)
+          ),
         ),
       ),
-
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(color: Color(0xffc8c3c0)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FutureBuilder<Map<String, dynamic>?>(
-                    future: userFuture, // ✅ Fetch user details from cloud function
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      }
-                      if (!snapshot.hasData || snapshot.data == null) {
-                        return Center(child: Text("No User Info"));
-                      }
-
-                      final userData = snapshot.data!;
-                      final String username = userData['username'] ?? "User";
-                      final dynamic profileImageData = userData['profileImage']; // Could be a Map
-
-                      // ✅ Extract profile image URL correctly
-                      String? profileImageUrl;
-                      if (profileImageData is String) {
-                        profileImageUrl = profileImageData; // Direct string URL
-                      } else if (profileImageData is Map<String, dynamic>) {
-                        profileImageUrl = profileImageData['url']; // Extract 'url' from ParseFile object
-                      }
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Color(0xffebc642),
-                            backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
-                                ? NetworkImage(profileImageUrl) // ✅ Use the extracted profile image URL
-                                : AssetImage("assets/people.png") as ImageProvider,
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            username,
-                            style: TextStyle(color: Colors.black, fontSize: 18),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-
-
-                ],
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.amber),
-              title: Text("Edit Profile"),
-              onTap: () async {
-                // ✅ Wait for the user to return from the edit profile page
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProfileEditScreen()),
-                );
-
-                // ✅ Refresh user data when returning
-                setState(() {
-                  userFuture = _getCurrentUser();
-                });
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.lightbulb_outline, color: Colors.amber), // ✅ Lamp Icon
-              title: Text("The OWeekN Idea"),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => OWeekNIdeaPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.logout, color: Colors.amber),
-              title: Text("Logout"),
-              onTap: logout,
-            ),
-          ],
+      title: Text(
+        "Home",
+        style: GoogleFonts.poppins(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          color: Colors.black, // ✅ Make title black for contrast
         ),
       ),
-      body: Stack(
+      leading: Builder(
+        builder: (context) {
+          return IconButton(
+            icon: Icon(Icons.menu, color: Colors.black), // ✅ Black menu icon for visibility
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          );
+        },
+      ),
+    ),
+
+
+    drawer:
+    Drawer(
+      child: Column(
+      children: [
+      // ✅ Modern Drawer Header
+      Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(top: 50, bottom: 20),
+      // decoration: BoxDecoration(
+      //     gradient: LinearGradient(
+      //       colors: [Color(0xFFFFC107), Color(0xFFFFA000)], // ✅ Amber shades
+      //       begin: Alignment.topLeft,
+      //       end: Alignment.bottomRight,
+      //     ),
+      // ),
+        color: Color(0xFFFFC107), // ✅ Single Amber Color
+
+        child: Column(
         children: [
-          // ✅ Background Image with Transparency
-          // Positioned(
-          //   top: 0,
-          //   left: 0,
-          //   right: 0,
-          //   child: Container(
-          //     height: MediaQuery.of(context).size.height * 0.50,
-          //     child: Stack(
-          //       children: [
-          //         Positioned.fill(
-          //           child: Image.asset(
-          //             'assets/placeholder.png',
-          //             fit: BoxFit.cover,
-          //           ),
-          //         ),
-          //         Positioned.fill(
-          //           child: Container(
-          //             color: Color.fromARGB(128, 255, 255, 255),
-          //           ),
-          //         ),
-          //       ],
-          //     ),
-          //   ),
-          // ),
+          FutureBuilder<Map<String, dynamic>?>(
+            future: userFuture, // ✅ Fetch user details from cloud function
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircularProgressIndicator(color: Colors.white);
+              }
+              if (!snapshot.hasData || snapshot.data == null) {
+                return Text("No User Info", style: TextStyle(color: Colors.white));
+              }
+
+              final userData = snapshot.data!;
+              final String username = userData['username'] ?? "User";
+              final dynamic profileImageData = userData['profileImage'];
+
+              // ✅ Extract profile image URL correctly
+              String? profileImageUrl;
+              if (profileImageData is String) {
+                profileImageUrl = profileImageData;
+              } else if (profileImageData is Map<String, dynamic>) {
+                profileImageUrl = profileImageData['url'];
+              }
+
+              return Column(
+                children: [
+                  // ✅ Profile Image with Black Border
+                  Container(
+                    padding: EdgeInsets.all(4), // ✅ Creates black border effect
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white70, // ✅ Black circle around avatar
+                    ),
+                    child: CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Color.fromRGBO(255, 255, 255, 0.3), // ✅ Fix using RGBO
+                      backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
+                          ? NetworkImage(profileImageUrl)
+                          : AssetImage("assets/people.png") as ImageProvider,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    username,
+                    style: TextStyle(
+                      color: Colors.black, // ✅ Black text for username
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+
+    // ✅ Modern List Items
+    Expanded(
+    child: ListView(
+    padding: EdgeInsets.symmetric(vertical: 10),
+    children: [
+    _buildDrawerItem(Icons.edit, "Edit Profile", () async {
+    await Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => ProfileEditScreen()),
+    );
+    setState(() {
+    userFuture = _getCurrentUser();
+    });
+    }),
+
+    _buildDrawerItem(Icons.lightbulb_outline, "The OWeekN Idea", () {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => OWeekNIdeaPage()));
+    }),
+
+      _buildDrawerItem(Icons.logout, "Logout", () => logout(context)),
+    ],
+    ),
+    ),
+    ],
+    ),
+    ),
+
+
+
+    body: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Color(0xFFF5F5F5), // ✅ Choose from Light Grey, Beige, or Blue-Grey
+          ),
 
           // ✅ Foreground Content (Cards start from the top)
           Column(
@@ -273,14 +363,21 @@ class _HomePageState extends State<HomePage> {
 
               // ✅ Title (Inside Foreground Content)
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  "Recent OWeekN Ideas",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                padding: EdgeInsets.symmetric(horizontal: 16), // ✅ Add padding for better spacing
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start, // ✅ Align left
+                  children: [
+                    Text(
+                      "Recent OWeekN Ideas",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(width: 8), // ✅ Add spacing between text and icon
+                    Icon(Icons.lightbulb, color: Colors.amber, size: 28), // ✅ Lamp icon
+                  ],
                 ),
               ),
 
@@ -305,7 +402,6 @@ class _HomePageState extends State<HomePage> {
                       itemCount: posts.length,
                       itemBuilder: (context, index) {
                         final post = posts[index];
-                        final postId = post['objectId'] as String; // ✅ Correctly access objectId from Map
                         final title = post['postTitle'] as String? ?? 'No Title';
 
                         // ✅ Correctly fetch username from the included 'createdBy' user map
@@ -322,8 +418,8 @@ class _HomePageState extends State<HomePage> {
                         // }
 
                         return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            final bool? deleted = await Navigator.push(
                               context,
                               PageRouteBuilder(
                                 pageBuilder: (context, animation, secondaryAnimation) => PostDetailPage(post: post),
@@ -332,11 +428,18 @@ class _HomePageState extends State<HomePage> {
                                 },
                               ),
                             );
+
+                            if (deleted == true) {
+                              // ✅ Refresh Home Screen after post deletion
+                              setState(() {
+                                postsFuture = fetchPosts(); // ✅ Re-fetch posts
+                              });
+                            }
                           },
                           child: PostCard(
                             title: title,
                             username: username, // ✅ Correctly pass the username
-                            imageUrl: postImageUrl ?? '',
+                            imageUrl: postImageUrl,
                             summary: summary, // ✅ Pass summary
                           ),
                         );
@@ -381,78 +484,102 @@ class PostCard extends StatelessWidget {
   final String title;
   final String username;
   final String imageUrl;
-  final String summary; // ✅ New summary field
+  final String summary;
 
   const PostCard({
     required this.title,
     required this.username,
     required this.imageUrl,
-    required this.summary, // ✅ Accept summary
+    required this.summary,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4.0,
-      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15.0),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ✅ Post Image at the Top
-          ClipRRect(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
-            child: imageUrl.isNotEmpty
-                ? Image.network(
-              imageUrl,
-              width: double.infinity,
-              height: 180,
-              fit: BoxFit.fitWidth, // ✅ Ensures the image fits properly
-            )
-                : Image.asset(
-              'assets/photo-camera.png',
-              width: double.infinity,
-              height: 180,
-              fit: BoxFit.fitWidth,
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10, left: 16, right: 16), // ✅ Keep consistent spacing
+      child: Container(
+        decoration: BoxDecoration(
+          color: Color(0xFFf0f0f0), // ✅ Flat, soft background like the Stops Card
+          borderRadius: BorderRadius.circular(16), // ✅ Rounded corners for a modern look
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ✅ Post Image (Rounded Top Corners)
+            if (imageUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                child: Image.network(
+                  imageUrl,
+                  width: double.infinity,
+                  height: 180,
+                  fit: BoxFit.cover,
+                ),
+              ),
+
+            Padding(
+              padding: EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ✅ Title with Icon
+                  Row(
+                    children: [
+                      Icon(Icons.article, color: Colors.brown, size: 22),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 6),
+
+                  // ✅ Created By Section
+                  Row(
+                    children: [
+                      Icon(Icons.person, color: Colors.brown, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        username,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 6),
+
+                  // ✅ Summary Section
+                  Row(
+                    children: [
+                      Icon(Icons.short_text, color: Colors.brown, size: 22),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          summary,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ✅ Post Title
-                Text(
-                  title,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 6),
-
-                // ✅ Username
-                Text(
-                  'Created by: $username',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-                SizedBox(height: 6),
-
-                // ✅ Post Summary
-                Text(
-                  summary,
-                  maxLines: 2, // ✅ Limit to 2 lines to keep layout clean
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[800]),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
-
 
