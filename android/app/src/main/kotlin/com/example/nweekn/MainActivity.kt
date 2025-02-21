@@ -1,4 +1,4 @@
-package com.example.nweekn
+package com.azcs.nweekn
 
 import io.flutter.embedding.android.FlutterActivity
 
